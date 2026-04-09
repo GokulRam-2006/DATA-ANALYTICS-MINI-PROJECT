@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="UTF-8">
+  <title>Traffic Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+  body { background:#f1f5f9; font-family:sans-serif; }
+  #map { height:400px; }
+  </style>
+  </head>
+
+  <body class="p-4">
+
+  <h1 class="text-xl font-bold mb-4">Traffic Accident Dashboard</h1>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-3 gap-4 mb-4">
+  <div>Total: <span id="total">0</span></div>
+  <div>Fatal: <span id="fatal">0</span></div>
+  <div>Peak Hour: <span id="peak">--</span></div>
+  </div>
+
+  <!-- Map -->
+  <div id="map" class="mb-4"></div>
+
+  <!-- Chart -->
+  <canvas id="chart"></canvas>
+
+  <script>
+  let map = L.map('map').setView([40.75,-73.98], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  let data = [];
+
+  // Generate data
+  function generate(n=300){
+  data = [];
+  for(let i=0;i<n;i++){
+   let hour = Math.floor(Math.random()*24);
+   data.push({
+   lat:40.75+(Math.random()-0.5)*0.05,
+   lng:-73.98+(Math.random()-0.5)*0.05,
+   hour,
+   severity: hour<5?"Fatal":"Normal"
+    });
+   }
+  }
+
+  // Update UI
+  function update(){
+  document.getElementById("total").innerText = data.length;
+  let fatal = data.filter(d=>d.severity==="Fatal").length;
+  document.getElementById("fatal").innerText = fatal;
+
+  let hours = {};
+  data.forEach(d=>hours[d.hour]=(hours[d.hour]||0)+1);
+  let peak = Object.entries(hours).sort((a,b)=>b[1]-a[1])[0][0];
+  document.getElementById("peak").innerText = peak+":00";
+
+  // Map
+  map.eachLayer(l=>{ if(l instanceof L.CircleMarker) map.removeLayer(l); });
+  data.forEach(d=>{
+    L.circleMarker([d.lat,d.lng],{
+      radius:5,
+      color:d.severity==="Fatal"?"red":"blue"
+    }).addTo(map);
+  });
+
+  // Chart
+  let counts = new Array(24).fill(0);
+  data.forEach(d=>counts[d.hour]++);
+
+  new Chart(document.getElementById("chart"),{
+    type:"bar",
+    data:{
+      labels:[...Array(24).keys()],
+      datasets:[{data:counts}]
+     }
+   });
+  }
+
+  // Run
+  generate();
+  update();
+  </script>
+
+  </body>
+  </html>
